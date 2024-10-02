@@ -4,6 +4,8 @@ import math
 import re
 import os
 
+# https://github.com/Rodantny/Rate-My-Professor-Scraper-and-Search/tree/master
+
 class RateMyProfScraper:
     def __init__(self, schoolid=822, prof_list: str="proflist.json"):
         # Rowan University: 822
