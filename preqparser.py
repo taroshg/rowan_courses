@@ -4,22 +4,34 @@ import re
 class PreqParser():
     """parses prerequisites from Rowan's detailed course information
     """
-    def __init__(self, string) -> None:
-        self.tokens = re.findall(r'([A-Z]{2,4} \d{5}|\(|\)|or|and)', string)
+    def __init__(self, inp: str) -> None:
+        self.inp = inp
+        self.tokens = re.findall(r'([A-Z]{2,4} \d{5}|\(|\)|or|and)', inp)
+
+        # this is to filter out possible empty parentheses, which raises mismatched parentheses error 
+        self.tokens = []
+        tokens = re.findall(r'([A-Z]{2,4} \d{5}|\(|\)|or|and)', inp)
+        for i in range(len(tokens)):
+            if tokens[i] == '(' and tokens[i+1] == ')':
+                continue
+            if tokens[i] == ')' and tokens[i-1] == '(':
+                continue
+            self.tokens.append(tokens[i])
+
         # abstract syntax tree
         self.ast = self.parse()
         
     def parse(self):
         index, ast = self._parse_or(0)
         if index != len(self.tokens):
-            raise ValueError("Unexpected tokens at the end")
+            raise ValueError(f"Unexpected tokens at the end: {self.inp}")
         return ast
 
     def _parse_expression(self, index):
         if self.tokens[index] == '(':
             index, node = self._parse_or(index + 1)
             if self.tokens[index] != ')':
-                raise ValueError("Mismatched parentheses")
+                raise ValueError(f"Mismatched parentheses: {self.inp}")
             return index + 1, node
         else:
             return index + 1, self.tokens[index]

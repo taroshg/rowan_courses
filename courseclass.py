@@ -1,9 +1,6 @@
 from course import Course
-import datetime
+from datetime import datetime
 import re
-
-TERM_VALUE = ['40', '30', '20', '10']
-TERM_NAME = ['fall', 'summer', 'spring', 'winter']
 
 class CourseClass(Course):
     """creates a class for a certain course
@@ -17,13 +14,19 @@ class CourseClass(Course):
     """
     def __init__(self, subj: str, 
                        crse: str, 
-                       prof: str,
+                       prof: str | dict,
                        sched: str,
+                       avail: int,
+                       max: int,
                        term: str = '202520') -> None:
 
         super().__init__(subj, crse, term)
-
+        
         self.sched = self._decode_class_meeting(sched)
+        self.prof = prof
+        self.avail = avail
+        self.max = max
+        self.term = term
 
     def _dtoi(self, d):
         """converts day to int
@@ -33,7 +36,7 @@ class CourseClass(Course):
     def _itod(self, i):
         return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i]
 
-    def _ln_decode_class_meeting(self, string):
+    def _ln_decode_class_meeting(self, string: str):
         days_match = re.search(r"[A-Z]{,6}", string)
         time_match = re.search(r'(\b\d{4}) (\d{4}\b)', string)
         place_match = re.search(r"([A-Z]{3,6}) (\d{,4}\b)", string)
@@ -46,7 +49,7 @@ class CourseClass(Course):
 
         return days, time, place
 
-    def _decode_class_meeting(self, string):
+    def _decode_class_meeting(self, string: str):
         """Decodes the class meeting time from a typical Rowan format
             Args:
                 str: Rowan's string for class meetings

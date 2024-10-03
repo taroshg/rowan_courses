@@ -1,4 +1,3 @@
-from course import Course
+from catalog import Catalog
 
-course = Course(subj='CS', crse='04670', term='202520')
-print(course)
+rowan_catalog = Catalog(term='spring 2024')

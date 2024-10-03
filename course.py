@@ -10,9 +10,9 @@ class Course:
         self.term = term
 
         response = requests.post(url='https://banner9.rowan.edu/ords/ssb/bwckctlg.p_disp_course_detail',
-                  data= {'cat_term_in': term,
-                         'subj_code_in': subj,
-                         'crse_numb_in': crse})
+                  data= {'cat_term_in': self.term,
+                         'subj_code_in': self.subj,
+                         'crse_numb_in': self.crse})
 
         assert (response.status_code == 200), f"error: {response.status_code}, unable to find course"
 
@@ -23,7 +23,7 @@ class Course:
         self.desc = self._extract_desc()
         self.credits = self._extract_credits()
 
-    def _extract_preqs(self) -> PreqParser:
+    def _extract_preqs(self) -> str:
         """
             extracts prerequisites from Rowan's detailed course information website
             
@@ -53,7 +53,11 @@ class Course:
             if s != None:
                 res.append(s)
 
-        return PreqParser(''.join(res))
+        return ''.join(res)
+        # try:
+        #     return PreqParser(''.join(res))
+        # except:
+        #     return ''.join(res)
 
     def _extract_desc(self) -> str:
         _found = self.soup.find('td', 'ntdefault')
@@ -69,9 +73,9 @@ class Course:
             return None
         return _found.string
 
-    def _extract_credits(soup) -> str:
+    def _extract_credits(self) -> str:
         # ensures it is credits
-        _match = re.search(r'(\d{1}\.\d{,4}) (Credit)', soup.text)
+        _match = re.search(r'(\d{1}\.\d{,4}) (Credit)', self.soup.text)
         if _match:
             return _match.group(1)
         return None

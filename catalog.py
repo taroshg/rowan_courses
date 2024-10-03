@@ -1,39 +1,70 @@
 import pandas as pd
-from course import Course
 from tqdm.autonotebook import tqdm
+
+from course import Course
+from courseclass import CourseClass
+from sectiontally import SectionTally
+from ratemyprof import RateMyProfScraper
+
 
 class Catalog():
     """course catelog from Rowan section tally for any given semester
     Args:
-        section_tally: select a term from
-        https://banner.rowan.edu/reports/reports.pl?task=Section_Tally
-        and search for ALL, then download as execel and load it into pandas
         term: the term that was selected should be a str code
     Returns:
         a dict where the key is subject and the value is a list of all crse numbers
     """
-    def __init__(self, section_tally: pd.DataFrame, term:str ='202520'):
-        self.st = section_tally
-        self.subjs = section_tally['Subj'].unique()
+    def __init__(self, csv='tally.csv', term:str ='Spring 2024'):
+        self.term = term
+        self.csv = csv
+        
+        self.st = SectionTally(term=term, 
+                               csv=csv)
+        self.df = self.st.df
+        # 822 is code of Rowan University
+        self.profs = RateMyProfScraper(822)
+
+        self.subjs = self.df['Subj'].unique()
         self.courses = {}
         for subj in self.subjs:
-            self.courses[subj] = section_tally[section_tally['Subj'] == subj]['Crse'].unique()
+            self.courses[subj] = self.df[self.df['Subj'] == subj]['Crse'].unique()
 
         self.catalog = {}
         for subj in tqdm(self.courses):
             for crse in self.courses[subj]:
+
                 course = Course(subj, crse, term)
+                classes = self.get_classes(subj, crse)
 
                 if course.credits == None:
                     # slower method for extracting course credits
                     course.credits = self._extract_creds()
 
-                self.catalog[f'{subj} {crse}'] = course
+                self.catalog[f'{subj} {crse}'] = {"info": course, 
+                                                  "classes": classes}
+
+    def get_classes(self, subj, crse) -> list[CourseClass]:
+        classes = self.df[(self.df['Subj'] == subj) & (self.df['Crse'] == crse)]
+        out: list[CourseClass] = []
+        for i in range(len(classes)):
+            cls = classes.iloc[i]
+            prof = self.profs.find_prof(cls['Prof'])
+
+            # if proffesor info is found else just put in string
+            prof = prof if prof else cls['Prof']
+            cls = CourseClass(subj, 
+                              crse, 
+                              prof, 
+                              cls['Day  Beg   End   Bldg Room  (Type)'], 
+                              cls['Avail'], 
+                              cls['Max'])
+            out.append(cls)
+        return 
 
     def _extract_creds(self):
-        """ extracts credits from the secition_tally
+        """ backup to extracts credits from the secition_tally if not found in description
         """
-        _found = self.st[(self.st['Subj'] == self.subj) & (self.st['Crse'] == self.crse)]['Hrs']
+        _found = self.df[(self.df['Subj'] == self.subj) & (self.df['Crse'] == self.crse)]['Hrs']
         creds = None
         # if creds are found and the credits of all classes are the same
         if len(_found) > 0 and _found.all():

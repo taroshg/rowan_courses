@@ -11,11 +11,14 @@ class RateMyProfScraper:
         # Rowan University: 822
         self.schoolid = schoolid
         if not os.path.exists('proflist.json'):
-            self.professors = self.get_profs()
+            self.professors = self.download()
         else:
             self.professors = json.load(open(prof_list))
+            # ensure that saved data is of correct school
+            if self.professors[0]['tSid'] != str(schoolid):
+                self.professors = self.download()
 
-    def get_profs(self):
+    def download(self):
         """creates List object that include basic information on all Professors from the IDed University
         """
         profList = []
@@ -39,12 +42,12 @@ class RateMyProfScraper:
         return len(name1.intersection(name2)) > 1
 
     def find_prof(self, name: str) -> int:
-        for i in range(len(self.professorlist)):
-            cur_prof = self.professorlist[i]
+        for i in range(len(self.professors)):
+            cur_prof = self.professors[i]
             cur_name = f"{cur_prof['tFname']} {cur_prof['tMiddlename']} {cur_prof['tLname']}"
 
             if self._compare_names(name, cur_name):
-                return self.professorlist[i]
+                return self.professors[i]
         return False
 
     def api(self, page: int):
