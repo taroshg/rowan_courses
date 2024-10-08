@@ -30,18 +30,38 @@ html, body {
 .App-link {
   color: #61dafb;
 }
-.course-title {
-  font-size: clamp(1.2rem, 3vw, 1.8rem);
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #f0f0f0;
+
+.search-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
 }
 
-.course-desc {
-  font-size: clamp(0.9rem, 2vw, 1.1rem);
+.search-bar {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
   margin-bottom: 1rem;
-  color: #c0c0c0;
-  line-height: 1.4;
+}
+
+.search-button {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  margin-left: 1rem;
+}
+
+.search-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .course-container {
@@ -72,6 +92,38 @@ html, body {
     padding: 0.8rem;
     border-radius: 8px;
   }
+}
+
+.course-title {
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #f0f0f0;
+}
+
+.course-desc {
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  margin-bottom: 1rem;
+  color: #c0c0c0;
+  line-height: 1.4;
+}
+
+.course-creds {
+  font-size: clamp(0.5rem, 2vw, .9rem);
+  margin-bottom: 1.5rem;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  background-color: #2980b9;
+  font-weight: bold;
+}
+
+.course-preqs {
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  margin-bottom: 1rem;
+  color: #c0c0c0;
+  line-height: 1.4;
 }
 
 .classes-container {
