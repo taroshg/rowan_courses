@@ -5,17 +5,19 @@ import pandas as pd
 import requests
 import csv
 import os
+import re
 
 TERM_VALUE = ['40', '30', '20', '10']
 TERM_NAME = ['fall', 'summer', 'spring', 'winter']
 
 class SectionTally():
-    def __init__(self, term:str, csv:str='tally.csv', force_download=False) -> None:
+    def __init__(self, term:str, json_file:str='tally.csv', force_download=False) -> None:
         self.term = self._get_term_code(term)
+        self.json_file = json_file
 
         if not force_download:
-            if os.path.exists(csv):
-                self.df = pd.read_csv(csv)
+            if os.path.exists(self.json_file):
+                self.df = pd.read_json(self.json_file, orient='records')
             else:
                 self.df = self.download()
         else:
@@ -54,14 +56,108 @@ class SectionTally():
         root = etree.fromstring(response.content, parser=parser)
 
         # Open a CSV file for writing
-        with open('tally.csv', 'w', newline='') as csvfile:
-            csvwriter = csv.writer(csvfile)
-            # Iterate through the XML tree and extract data
-            for worksheet in root.findall('{urn:schemas-microsoft-com:office:spreadsheet}Worksheet'):                
-                for table in worksheet.findall('{urn:schemas-microsoft-com:office:spreadsheet}Table'):
-                    for row in tqdm(table.findall('{urn:schemas-microsoft-com:office:spreadsheet}Row')):
-                        row_data = [cell.find('{urn:schemas-microsoft-com:office:spreadsheet}Data').text for cell in row.findall('{urn:schemas-microsoft-com:office:spreadsheet}Cell')]
-                        csvwriter.writerow(row_data)
+        data = []
+        # Iterate through the XML tree and extract data
+        for worksheet in root.findall('{urn:schemas-microsoft-com:office:spreadsheet}Worksheet'):                
+            for table in worksheet.findall('{urn:schemas-microsoft-com:office:spreadsheet}Table'):
+                for row in tqdm(table.findall('{urn:schemas-microsoft-com:office:spreadsheet}Row')):
+                    row_data = [cell.find('{urn:schemas-microsoft-com:office:spreadsheet}Data').text for cell in row.findall('{urn:schemas-microsoft-com:office:spreadsheet}Cell')]
+                    data.append(row_data)
+        
+        # Convert the data to a pandas DataFrame
+        df = pd.DataFrame(data[1:], columns=data[0])  # Assuming the first row contains column names
 
-        return pd.read_csv('tally.csv')
+        # Rename the 'Day  Beg   End   Bld  g Room  (Type)' column to a more readable name
+        df = df.rename(columns={'Day  Beg   End   Bldg Room  (Type)': 'schedule'})
 
+        # Apply the _decode_class_meeting_to_str function to the 'schedule' column
+        df['schedule'] = df['schedule'].apply(lambda x: self._decode_class_meeting_to_str(x))
+
+        # Save the updated DataFrame to a JSON file
+        df.to_json(self.json_file, orient='records')
+
+        return df
+
+    def _ln_decode_class_meeting(self, string: str):
+        days_match = re.search(r"[A-Z]{,6}", string)
+        time_match = re.search(r'(\b\d{4}) (\d{4}\b)', string)
+        place_match = re.search(r"([A-Z]{3,6}) (\d{,4}\b)", string)
+
+        _time = lambda x : datetime.strptime(x, "%H%M") 
+
+        def _dtoi(d):
+            """converts day to int
+            """
+            
+            return 'MTWRFS'.index(d)
+
+        def _itod(i):
+            return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i]
+
+        days = [_itod(_dtoi(d)) for d in days_match.group()] if days_match else None
+        time = (_time(time_match.group(1)), _time(time_match.group(2))) if time_match else None
+        place = (place_match.group(1), place_match.group(2)) if place_match else None
+
+        return days, time, place
+
+    def _decode_class_meeting(self, string: str):
+        """Decodes the class meeting time from a typical Rowan format
+            Args:
+                str: Rowan's string for class meetings
+                example - "TR      1830 1945 SCIENC 149 (Class)\n
+                        TR      2000 2115 SCIENC 149 (Class)"
+                        - "MW      0930 1045 SCIENC 232 (Class)\n
+                        T       1230 1345 SCIENC 232 (Class)\n
+                        T       1400 1515 SCIENC 232 (Class)"
+                        - "TR      1700 1815 DISCOV 409 (Class)"
+                        - "MW      1530 1645   (Class)"
+            Returns:
+                times_dict: <days: int> : list[(start time, end time), ...]
+                rooms_dict: <days:int> : (bldg, room)
+                        
+        """
+
+        if not string:
+            return None, None
+
+        _ln_split: list[str] = string.split('\n')
+
+        # <days: int> : list[(start time, end time), ...]
+        times_dict = {}
+
+        # <days:int> : (bldg, room)
+        rooms_dict = {}
+
+        for mtg in _ln_split:
+            days, time, place = self._ln_decode_class_meeting(mtg)
+            for d in days:
+                if d in times_dict:
+                    times_dict[d].append(time)
+                else:
+                    times_dict[d] = [time]
+
+                rooms_dict[d] = place
+
+        return times_dict, rooms_dict
+    
+    def _decode_class_meeting_to_str(self, string: str):    
+        try:
+            times, rooms = self._decode_class_meeting(string)
+            out_str = ""
+            for day in times:
+                out_str += day + ": "
+                if len(times[day]) == 0:
+                    continue
+                for start_time, end_time in times[day]:
+                    start_str = start_time.strftime("%I:%M %p").lstrip("0").lower()
+                    end_str = end_time.strftime("%I:%M %p").lstrip("0").lower()
+                    time_range = f"{start_str} - {end_str}"
+                    out_str += time_range + ", "
+
+                if rooms[day] is not None:
+                    out_str += "in " + rooms[day][0] + " " + rooms[day][1]
+                    out_str += "\n"
+
+            return out_str
+        except:
+            return None
