@@ -11,17 +11,17 @@ TERM_VALUE = ['40', '30', '20', '10']
 TERM_NAME = ['fall', 'summer', 'spring', 'winter']
 
 class SectionTally():
-    def __init__(self, term:str, json_file:str='tally.csv', force_download=False) -> None:
-        self.term = self._get_term_code(term)
-        self.json_file = json_file
+    def __init__(self, 
+                 term:str='ALL', 
+                 subj:str='ALL',
+                 dept:str='ALL',
+                 attr:str='ALL') -> None:
+        self.term = term
+        self.subj = subj
+        self.dept = dept
+        self.attr = attr
 
-        if not force_download:
-            if os.path.exists(self.json_file):
-                self.df = pd.read_json(self.json_file, orient='records')
-            else:
-                self.df = self.download()
-        else:
-            self.df = self.download()
+        self.df = self.download(self.term, self.subj, self.dept, self.attr)
 
     def _get_term_code(self, term: str):
         """gets rowan term code, {year}{TERM_VALUE}
@@ -36,17 +36,17 @@ class SectionTally():
 
         return f"{year}{TERM_VALUE[TERM_NAME.index(term.lower())]}"
 
-    def download(self):
+    def download(self, term='ALL', subj='ALL', dept='ALL', attr='ALL'):
         response = requests.post(url='https://banner.rowan.edu/reports/reports.pl?task=Section_Tally',
-                data= {"term": self.term,
+                data= {"term": term,
                         "task": "Section_Tally",
                         "coll": "ALL",
-                        "dept": "ALL",
-                        "subj": "ALL",
+                        "dept": dept,
+                        "subj": subj,
                         "ptrm": "ALL",
                         "sess": "ALL",
                         "prof": "ALL",
-                        "attr": "ALL",
+                        "attr": attr,
                         "camp": "ALL",
                         "bldg": "ALL",
                         "Search": "Search",
@@ -68,13 +68,10 @@ class SectionTally():
         df = pd.DataFrame(data[1:], columns=data[0])  # Assuming the first row contains column names
 
         # Rename the 'Day  Beg   End   Bld  g Room  (Type)' column to a more readable name
-        df = df.rename(columns={'Day  Beg   End   Bldg Room  (Type)': 'schedule'})
+        df = df.rename(columns={'Day  Beg   End   Bldg Room  (Type)': 'Schedule'})
 
         # Apply the _decode_class_meeting_to_str function to the 'schedule' column
-        df['schedule'] = df['schedule'].apply(lambda x: self._decode_class_meeting_to_str(x))
-
-        # Save the updated DataFrame to a JSON file
-        df.to_json(self.json_file, orient='records')
+        df['Schedule'] = df['Schedule'].apply(lambda x: self._decode_class_meeting_to_str(x))
 
         return df
 

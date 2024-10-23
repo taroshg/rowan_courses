@@ -8,7 +8,7 @@ import os
 # https://github.com/Rodantny/Rate-My-Professor-Scraper-and-Search/tree/master
 
 class RateMyProfScraper:
-    def __init__(self, schoolid=822, profs_json: str="profs.json", force_download=False):
+    def __init__(self, schoolid=822, profs_json: str="./data/profs.json", force_download=False):
         # Rowan University: 822
         self.schoolid = schoolid
         self.profs_json = profs_json

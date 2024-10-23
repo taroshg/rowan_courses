@@ -12,7 +12,7 @@ class Catalog():
     Args:
         section_tally: downloaded section_tally with selected term
     """
-    def __init__(self, tally: SectionTally, catalog_json='catalog.json', force_download=False):
+    def __init__(self, tally: SectionTally, catalog_json='./data/catalog.json', force_download=False):
         self.term = tally.term
         self.tally = tally
         self.catalog_json = catalog_json
@@ -55,7 +55,8 @@ class Catalog():
                     "preqs": self.extract_preqs(soup),
                     "creds": self.extract_credits(soup),
                 }
-        
+
+        catalog = self._filter_all_courses_preqs(catalog)      
 
         with open(self.catalog_json, 'w') as f:
             json.dump(catalog, f)
@@ -93,6 +94,33 @@ class Catalog():
                     res.append(s)
 
             return ''.join(res)
+    
+    def _filter_all_courses_preqs(self, catalog) -> None:
+        for course in catalog:
+            out = catalog[course]['preqs']
+            if out != None:
+                catalog[course]['preqs'] = self._filter_preqs(out, catalog)
+        return catalog
+    
+    def _filter_preqs(self, preqs_raw, catalog) -> str:
+        words_to_remove = ['Undergraduate level', 'Graduate level', 'Minimum Grade of']
+        pattern = r'\b(?:' + '|'.join(words_to_remove) + r')\b'
+
+        # removes all words in words_to_remove
+        out = re.sub(pattern, ' ', preqs_raw)
+
+        # fixes all spacing and minimaizes (min grade info.)
+        out = ' '.join(re.sub(r'([A-Z][+|-])', r'{min \1}', out).split())
+        preqs = re.findall(r'(\w{2,5} \d{5})', out)
+
+        # replaces all preqs with their titles
+        for preq in preqs:
+            if preq in catalog:
+                title = catalog[preq]['title']
+                out = out.replace(preq, title)
+
+        return out
+
 
     def extract_desc(self, soup) -> str:
         _found = soup.find('td', 'ntdefault')
