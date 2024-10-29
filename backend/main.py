@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sectiontally import SectionTally
 import json
+import asyncio
 
 app = FastAPI()
 
@@ -19,8 +20,32 @@ ATTRS = json.load(open('./data/attr.json'))
 CATALOG = json.load(open('./data/catalog.json'))
 PROFS = json.load(open('./data/profs.json'))
 
+tally_202520 = {}
+update_task = None
+
+async def update_tally_periodically():
+    print("getting tally data....")
+    while True:
+        # Logic to update the JSON data
+        global tally_202520
+        tally_202520 = SectionTally(term="202520").df.to_dict(orient='records')
+        await asyncio.sleep(15 * 60)  # Wait for 15 minutes
+
+@app.on_event("startup")
+async def startup_event():
+    print("Starting up...")
+    global update_task
+    update_task = asyncio.create_task(update_tally_periodically())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Cancel the update task if it exists
+    if update_task:
+        update_task.cancel()
+        await update_task 
+
 @app.get("/")
-async def root():
+async def root():    
     return {"message": "SectionTally API"}
 
 @app.get("/depts")
@@ -56,11 +81,13 @@ async def get_tally(term: str, subj: str = None, dept: str = None, attr: str = N
     elif attr not in ATTRS:
         return {"error": "Attribute not found"}
     
-    tally = SectionTally(term=term, subj=subj, dept=dept, attr=attr)
+    if term != '202520':
+        tally = SectionTally(term=term, subj=subj, dept=dept, attr=attr)
+        tally = tally.df.to_dict(orient='records')
+    else:
+        tally = tally_202520
 
-    out = dict()
-    out = tally.df.to_dict(orient='records')
-    return out
+    return tally
 
 @app.get("/catalog")
 async def get_catalog(course: str=None):

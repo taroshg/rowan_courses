@@ -21,6 +21,7 @@ class SectionTally():
         self.dept = dept
         self.attr = attr
 
+        print("downloading data....")
         self.df = self.download(self.term, self.subj, self.dept, self.attr)
 
     def _get_term_code(self, term: str):
