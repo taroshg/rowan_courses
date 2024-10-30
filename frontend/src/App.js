@@ -57,7 +57,7 @@ function ClassItem(props) {
       <div className='class-item-title'>{props.classItem['Title']}</div>
       <div className='class-item-prof'>
         {prof ? 
-        <a href={`https://www.ratemyprofessors.com/professor/${prof.tid}`} target='_blank'>
+        <a href={`https://www.ratemyprofessors.com/professor/${prof.tid}`} target='_blank' rel="noreferrer">
           Professor: {props.classItem['Prof']}
         </a> : 
         'Professor: ' + props.classItem['Prof']}
@@ -117,9 +117,9 @@ function SearchBar(props) {
   const [searchTerm, setSearchTerm] = useState('');
   const handleSearch = (searchTerm) => {
     const results = courses.filter(course =>
-      course.title.includes(searchTerm) ||
-      course.subj.includes(searchTerm) ||
-      course.crse.includes(searchTerm));
+      course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.subj.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.crse.toLowerCase().includes(searchTerm.toLowerCase()));
     setSearchResults(results);
   };
 
@@ -152,7 +152,7 @@ function App() {
 
   useEffect(() => {
     const fetchData = async () => {
-      let response = await fetch('http://localhost:8000/tally/202520');
+      let response = await fetch('https://rowan-courses.onrender.com/tally/202520');
       let data = await response.json();
       tallyData = Object.keys(data).map(key => data[key]);
       setIsLoading(false);
