@@ -2,17 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sectiontally import SectionTally
 import json
+from contextlib import asynccontextmanager
 import asyncio
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 DEPTS = json.load(open('./data/dept.json'))
 SUBJS = json.load(open('./data/subj.json'))
@@ -29,20 +20,30 @@ async def update_tally_periodically():
         # Logic to update the JSON data
         global tally_202520
         tally_202520 = SectionTally(term="202520").df.to_dict(orient='records')
-        await asyncio.sleep(15 * 60)  # Wait for 15 minutes
+        try:
+            await asyncio.sleep(15 * 60)  # Wait for 15 minutes
+        except:
+            pass
 
-@app.on_event("startup")
-async def startup_event():
-    print("Starting up...")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global update_task
+    print("Starting up...")
     update_task = asyncio.create_task(update_tally_periodically())
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     # Cancel the update task if it exists
-    if update_task:
-        update_task.cancel()
-        await update_task 
+    print("cancelling download tasks...")
+    update_task.cancel()
+
+app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():    
